@@ -66,4 +66,4 @@ Generated CSV files will be written to the project folder based on enabled modes
 
 ## Credit
 
-Built and maintained by Swan, with development support from Cursor.
+Author: Kellen Swanson
