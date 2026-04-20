@@ -1,13 +1,15 @@
 import pandas as pd
 
+# Trackman Team Name
+team_name = "HAW_WAR"
 url = "https://hawaiiathletics.com/sports/baseball/stats/2026"
 tables = pd.read_html(url)
 
-# Simple toggles: set each mode to "on" or "off"
+# Toggles
+trackman = "on"
 hitters = "on"
 pitchers = "on"
 fielders = "on"
-
 totals = "off"
 
 
@@ -66,6 +68,17 @@ def prepare_stats_table(df, totals_mode, decimal_rules):
     return clean_df
 
 
+def apply_trackman_team_column(df, trackman_mode, team_value, column_name):
+    if trackman_mode.lower() != "on":
+        return df
+
+    with_team = df.copy()
+    if column_name in with_team.columns:
+        with_team = with_team.drop(columns=[column_name])
+    with_team.insert(0, column_name, team_value)
+    return with_team
+
+
 pitching_decimal_rules = {
     "ERA": 2,
     "WHIP": 2,
@@ -87,12 +100,21 @@ fielding_decimal_rules = {
 # Sidearm Sports pages usually order tables like this:
 if hitters.lower() == "on":
     batting = prepare_stats_table(tables[0], totals, batting_decimal_rules)
+    batting = apply_trackman_team_column(
+        batting, trackman, team_name, "BatterTeam"
+    )
     batting.to_csv("hitters.csv", index=False)
 
 if pitchers.lower() == "on":
     pitching = prepare_stats_table(tables[1], totals, pitching_decimal_rules)
+    pitching = apply_trackman_team_column(
+        pitching, trackman, team_name, "PitcherTeam"
+    )
     pitching.to_csv("pitchers.csv", index=False)
 
 if fielders.lower() == "on":
     fielding = prepare_stats_table(tables[2], totals, fielding_decimal_rules)
+    fielding = apply_trackman_team_column(
+        fielding, trackman, team_name, "FielderTeam"
+    )
     fielding.to_csv("fielders.csv", index=False)

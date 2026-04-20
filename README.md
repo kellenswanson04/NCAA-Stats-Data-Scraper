@@ -5,10 +5,15 @@ A lightweight Python scraper that pulls team baseball statistics from Sidearm Sp
 ## Features
 
 - Independent `on/off` mode toggles for:
+  - Trackman
   - Hitters
   - Pitchers
   - Fielders
 - Optional `totals` toggle to include or exclude `Totals` and `Opponents` rows
+- When `trackman` is `on`, adds a Trackman-style team column on the far left:
+  - `BatterTeam` in `hitters.csv`
+  - `PitcherTeam` in `pitchers.csv`
+  - `FielderTeam` in `fielders.csv`
 - Alphabetical player sorting by last name (from the `Player` column)
 - Separate CSV outputs:
   - `hitters.csv`
@@ -39,10 +44,13 @@ pip install pandas
 
 Open `scraper.py` and set the toggles:
 
+- `trackman = "on"` or `"off"`
 - `hitters = "on"` or `"off"`
 - `pitchers = "on"` or `"off"`
 - `fielders = "on"` or `"off"`
 - `totals = "on"` or `"off"`
+
+Set `team_name` to your desired teams Trackman name. This value is written to the Trackman team column when `trackman` is enabled.
 
 Update the `url` variable to the team/year stats page you want to scrape.
 
