@@ -2,8 +2,8 @@ import pandas as pd
 import re
 
 # Trackman Team Name
-team_name = "CAL_FUL"
-url = "https://fullertontitans.com/sports/baseball/stats"
+team_name = "CAL_MAT"
+url = "https://hawaiiathletics.com/sports/baseball/stats/2026"
 tables = pd.read_html(url)
 
 # Toggles
@@ -12,6 +12,18 @@ hitters = "off"
 pitchers = "on"
 fielders = "off"
 totals = "off"
+
+
+def classify_table(df):
+    columns = set(df.columns)
+    if 'AVG' in columns and 'OPS' in columns:
+        return 'batting'
+    elif 'ERA' in columns or 'WHIP' in columns:
+        return 'pitching'
+    elif 'FLD%' in columns:
+        return 'fielding'
+    else:
+        return 'unknown'
 
 
 def format_decimal_columns(df, decimal_rules):
@@ -36,18 +48,13 @@ def prepare_stats_table(df, totals_mode, decimal_rules):
         def clean_player_cell(val):
             val = str(val).strip()
             
-            # 1. Remove leading jersey numbers (e.g., "11 Nankil, NateNate Nankil")
-            # This regex looks for digits at the start followed by whitespace
-            val = re.sub(r'^\d+\s+', '', val)
+            # Extract the first "Last, First" pattern using regex
+            match = re.search(r'([A-Za-z\s]+),\s*([A-Za-z\s]+)', val)
+            if match:
+                last_name, first_name = match.groups()
+                return f"{last_name.strip()}, {first_name.strip()}"
             
-            # 2. Fix the double name issue
-            if "," in val:
-                parts = val.split(",")
-                last_name = parts[0].strip()
-                rest = parts[1].strip()
-                if last_name in rest:
-                    first_name = rest.split(last_name)[0].strip()
-                    return f"{last_name}, {first_name}"
+            # Fallback: if no match, return stripped value
             return val
 
         clean_df["Player"] = clean_df["Player"].apply(clean_player_cell)
@@ -59,7 +66,7 @@ def prepare_stats_table(df, totals_mode, decimal_rules):
             .astype(str)
             .str.strip()
             .str.lower()
-            .isin(excluded_names)
+            .str.contains("total|opponent", na=False)
         ]
 
     if "Player" in clean_df.columns:
@@ -119,23 +126,30 @@ fielding_decimal_rules = {
     "FLD%": 3,
 }
 
-# Sidearm Sports pages usually order tables like this:
-if hitters.lower() == "on":
-    batting = prepare_stats_table(tables[0], totals, batting_decimal_rules)
+# Classify and collect tables
+classified_tables = {}
+for i, table in enumerate(tables):
+    table_type = classify_table(table)
+    if table_type != 'unknown' and table_type not in classified_tables:
+        classified_tables[table_type] = table
+
+# Process and save based on toggles
+if hitters.lower() == "on" and 'batting' in classified_tables:
+    batting = prepare_stats_table(classified_tables['batting'], totals, batting_decimal_rules)
     batting = apply_trackman_team_column(
         batting, trackman, team_name, "BatterTeam"
     )
     batting.to_csv("hitters.csv", index=False)
 
-if pitchers.lower() == "on":
-    pitching = prepare_stats_table(tables[1], totals, pitching_decimal_rules)
+if pitchers.lower() == "on" and 'pitching' in classified_tables:
+    pitching = prepare_stats_table(classified_tables['pitching'], totals, pitching_decimal_rules)
     pitching = apply_trackman_team_column(
         pitching, trackman, team_name, "PitcherTeam"
     )
     pitching.to_csv("pitchers.csv", index=False)
 
-if fielders.lower() == "on":
-    fielding = prepare_stats_table(tables[2], totals, fielding_decimal_rules)
+if fielders.lower() == "on" and 'fielding' in classified_tables:
+    fielding = prepare_stats_table(classified_tables['fielding'], totals, fielding_decimal_rules)
     fielding = apply_trackman_team_column(
         fielding, trackman, team_name, "FielderTeam"
     )
